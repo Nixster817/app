@@ -17,8 +17,281 @@ import { Trash2, Upload, Eye, Plus, Package, Tag, DollarSign, Share2, CheckCircl
 import { toast } from "sonner";
 import { Toaster } from "./components/ui/sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Multi-Marketplace Posting Dialog Component
+const MarketplacePostingDialog = ({ listing, onPostingComplete }) => {
+  const [open, setOpen] = useState(false);
+  const [marketplaces, setMarketplaces] = useState([]);
+  const [selectedMarketplaces, setSelectedMarketplaces] = useState([]);
+  const [posting, setPosting] = useState(false);
+  const [postingResults, setPostingResults] = useState(null);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (open) {
+      fetchMarketplaces();
+    }
+  }, [open]);
+
+  const fetchMarketplaces = async () => {
+    try {
+      const response = await axios.get(`${API}/marketplaces`);
+      setMarketplaces(response.data);
+    } catch (error) {
+      console.error('Error fetching marketplaces:', error);
+      toast.error("Failed to load marketplaces");
+    }
+  };
+
+  const handleMarketplaceToggle = (marketplaceId) => {
+    setSelectedMarketplaces(prev => 
+      prev.includes(marketplaceId)
+        ? prev.filter(id => id !== marketplaceId)
+        : [...prev, marketplaceId]
+    );
+  };
+
+  const handlePost = async () => {
+    if (selectedMarketplaces.length === 0) {
+      toast.error("Please select at least one marketplace");
+      return;
+    }
+
+    setPosting(true);
+    setProgress(0);
+
+    try {
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      const response = await axios.post(
+        `${API}/listings/${listing.id}/post-to-marketplaces`,
+        selectedMarketplaces
+      );
+
+      clearInterval(progressInterval);
+      setProgress(100);
+      setPostingResults(response.data);
+      
+      if (response.data.total_posted > 0) {
+        toast.success(`Successfully posted to ${response.data.total_posted} marketplace${response.data.total_posted > 1 ? 's' : ''}!`);
+      }
+      
+      if (response.data.total_failed > 0) {
+        toast.error(`Failed to post to ${response.data.total_failed} marketplace${response.data.total_failed > 1 ? 's' : ''}`);
+      }
+
+      if (onPostingComplete) {
+        onPostingComplete();
+      }
+    } catch (error) {
+      console.error('Error posting to marketplaces:', error);
+      toast.error("Failed to post to marketplaces");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const getStatusIcon = (success) => {
+    return success ? (
+      <CheckCircle className="h-4 w-4 text-green-600" />
+    ) : (
+      <XCircle className="h-4 w-4 text-red-600" />
+    );
+  };
+
+  const getAuthStatusBadge = (marketplace) => {
+    const statusColors = {
+      connected: "bg-green-100 text-green-800",
+      disconnected: "bg-red-100 text-red-800",
+      expired: "bg-yellow-100 text-yellow-800"
+    };
+
+    return (
+      <Badge className={`text-xs ${statusColors[marketplace.auth_status]}`}>
+        {marketplace.auth_status === 'connected' ? '✓ Connected' : 
+         marketplace.auth_status === 'expired' ? '⚠ Expired' : '✗ Not Connected'}
+      </Badge>
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+          <Share2 className="h-4 w-4 mr-2" />
+          Post to Marketplaces
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5 text-orange-600" />
+            Post to Multiple Marketplaces
+          </DialogTitle>
+          <DialogDescription>
+            Select the marketplaces where you want to post "{listing?.title}"
+          </DialogDescription>
+        </DialogHeader>
+
+        {!postingResults ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {marketplaces.map((marketplace) => (
+                <Card key={marketplace.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            checked={selectedMarketplaces.includes(marketplace.id)}
+                            onCheckedChange={() => handleMarketplaceToggle(marketplace.id)}
+                            disabled={marketplace.auth_status === 'disconnected' && marketplace.requires_auth}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <img 
+                                src={marketplace.logo_url} 
+                                alt={marketplace.name}
+                                className="w-6 h-6 object-contain"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                              <h3 className="font-semibold text-sm">{marketplace.name}</h3>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-2">{marketplace.description}</p>
+                            {marketplace.requires_auth && getAuthStatusBadge(marketplace)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {marketplace.auth_status === 'disconnected' && marketplace.requires_auth && (
+                        <div className="text-xs text-red-600 flex items-center gap-1">
+                          <Settings className="h-3 w-3" />
+                          Authentication required
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {selectedMarketplaces.length > 0 && (
+              <div className="border-t pt-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Selected {selectedMarketplaces.length} marketplace{selectedMarketplaces.length > 1 ? 's' : ''}
+                </p>
+                
+                {posting && (
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Posting to marketplaces...</span>
+                      <span>{progress}%</span>
+                    </div>
+                    <Progress value={progress} className="w-full" />
+                  </div>
+                )}
+                
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setOpen(false)} disabled={posting}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handlePost} 
+                    disabled={posting || selectedMarketplaces.length === 0}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    {posting ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        Posting...
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Post to {selectedMarketplaces.length} Marketplace{selectedMarketplaces.length > 1 ? 's' : ''}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="text-center py-4">
+              <h3 className="text-lg font-semibold mb-2">Posting Results</h3>
+              <div className="flex justify-center items-center gap-4 text-sm">
+                <div className="flex items-center gap-1 text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  {postingResults.total_posted} successful
+                </div>
+                {postingResults.total_failed > 0 && (
+                  <div className="flex items-center gap-1 text-red-600">
+                    <XCircle className="h-4 w-4" />
+                    {postingResults.total_failed} failed
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              {postingResults.results.map((result, index) => (
+                <Card key={index} className={`border-l-4 ${result.success ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(result.success)}
+                        <div>
+                          <h4 className="font-medium text-sm">{result.marketplace_name}</h4>
+                          {result.success ? (
+                            <div className="space-y-1">
+                              <p className="text-xs text-green-600">Posted successfully!</p>
+                              {result.listing_url && (
+                                <a 
+                                  href={result.listing_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  View listing
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-red-600">{result.error}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={() => setOpen(false)} className="bg-orange-600 hover:bg-orange-700 text-white">
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Create Listing Component
 const CreateListing = () => {
