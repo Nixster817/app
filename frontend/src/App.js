@@ -635,10 +635,16 @@ const ListingsDashboard = () => {
                     <span className="text-xs text-gray-500">
                       Created {new Date(listing.created_at).toLocaleDateString()}
                     </span>
-                    <Button size="sm" variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50">
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex gap-2">
+                      <MarketplacePostingDialog 
+                        listing={listing} 
+                        onPostingComplete={fetchListings}
+                      />
+                      <Button size="sm" variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50">
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
