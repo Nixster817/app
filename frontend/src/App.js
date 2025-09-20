@@ -148,7 +148,17 @@ const MarketplacePostingDialog = ({ listing, onPostingComplete }) => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {marketplaces.map((marketplace) => (
-                <Card key={marketplace.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                <Card 
+                  key={marketplace.id} 
+                  className={`cursor-pointer hover:shadow-md transition-shadow ${
+                    selectedMarketplaces.includes(marketplace.id) ? 'ring-2 ring-orange-500 bg-orange-50' : ''
+                  }`}
+                  onClick={() => {
+                    if (!(marketplace.auth_status === 'disconnected' && marketplace.requires_auth)) {
+                      handleMarketplaceToggle(marketplace.id);
+                    }
+                  }}
+                >
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
@@ -157,17 +167,13 @@ const MarketplacePostingDialog = ({ listing, onPostingComplete }) => {
                             checked={selectedMarketplaces.includes(marketplace.id)}
                             onCheckedChange={() => handleMarketplaceToggle(marketplace.id)}
                             disabled={marketplace.auth_status === 'disconnected' && marketplace.requires_auth}
+                            className="pointer-events-none"
                           />
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <img 
-                                src={marketplace.logo_url} 
-                                alt={marketplace.name}
-                                className="w-6 h-6 object-contain"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                }}
-                              />
+                              <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-xs font-bold text-gray-600">
+                                {marketplace.name.charAt(0)}
+                              </div>
                               <h3 className="font-semibold text-sm">{marketplace.name}</h3>
                             </div>
                             <p className="text-xs text-gray-600 mb-2">{marketplace.description}</p>
