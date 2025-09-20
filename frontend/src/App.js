@@ -379,6 +379,7 @@ function App() {
           <Route path="/create" element={<CreateListing />} />
         </Routes>
       </BrowserRouter>
+      <Toaster />
     </div>
   );
 }
