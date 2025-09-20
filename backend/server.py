@@ -293,6 +293,112 @@ async def remove_listing_image(listing_id: str, image_url: str = Form(...)):
     
     return {"message": "Image removed successfully"}
 
+@api_router.get("/marketplaces", response_model=List[Marketplace])
+async def get_marketplaces():
+    return [Marketplace(**marketplace) for marketplace in MARKETPLACES]
+
+@api_router.post("/listings/{listing_id}/post-to-marketplaces")
+async def post_to_marketplaces(listing_id: str, marketplace_ids: List[str]):
+    # Get the listing
+    listing = await db.listings.find_one({"id": listing_id})
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    
+    # Parse from MongoDB
+    listing = parse_from_mongo(listing)
+    
+    results = []
+    
+    # Process each marketplace
+    for marketplace_id in marketplace_ids:
+        # Find the marketplace
+        marketplace = next((m for m in MARKETPLACES if m["id"] == marketplace_id), None)
+        if not marketplace:
+            results.append({
+                "marketplace_id": marketplace_id,
+                "success": False,
+                "error": "Marketplace not found"
+            })
+            continue
+        
+        # Simulate posting to marketplace
+        posting_result = await simulate_marketplace_posting(listing, marketplace)
+        results.append(posting_result)
+        
+        # Store posting record
+        posting = MarketplacePosting(
+            listing_id=listing_id,
+            marketplace_id=marketplace_id,
+            marketplace_listing_id=posting_result.get("marketplace_listing_id"),
+            status="posted" if posting_result["success"] else "failed",
+            error_message=posting_result.get("error"),
+            listing_url=posting_result.get("listing_url"),
+            posted_at=datetime.now(timezone.utc) if posting_result["success"] else None
+        )
+        
+        # Store in database (you would expand this to use a proper postings collection)
+        await db.marketplace_postings.insert_one(prepare_for_mongo(posting.dict()))
+    
+    # Update listing with posting status
+    await db.listings.update_one(
+        {"id": listing_id},
+        {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {
+        "listing_id": listing_id,
+        "results": results,
+        "total_posted": len([r for r in results if r["success"]]),
+        "total_failed": len([r for r in results if not r["success"]])
+    }
+
+async def simulate_marketplace_posting(listing: dict, marketplace: dict):
+    """Simulate posting to a marketplace (in real implementation, this would call actual APIs)"""
+    import asyncio
+    import random
+    
+    # Simulate processing time
+    await asyncio.sleep(random.uniform(0.5, 2.0))
+    
+    # Simulate success/failure (90% success rate for demo)
+    success = random.random() > 0.1
+    
+    if success:
+        # Generate mock listing ID and URL
+        mock_listing_id = f"{marketplace['id']}_{random.randint(100000, 999999)}"
+        mock_url = f"https://{marketplace['id']}.com/listing/{mock_listing_id}"
+        
+        return {
+            "marketplace_id": marketplace["id"],
+            "marketplace_name": marketplace["name"],
+            "success": True,
+            "marketplace_listing_id": mock_listing_id,
+            "listing_url": mock_url,
+            "posted_at": datetime.now(timezone.utc).isoformat()
+        }
+    else:
+        # Simulate random errors
+        errors = [
+            "Category not allowed for this item type",
+            "Price too low for marketplace minimum",
+            "Authentication token expired",
+            "Image format not supported",
+            "Title contains prohibited words"
+        ]
+        
+        return {
+            "marketplace_id": marketplace["id"],
+            "marketplace_name": marketplace["name"],
+            "success": False,
+            "error": random.choice(errors)
+        }
+
+@api_router.get("/listings/{listing_id}/postings")
+async def get_listing_postings(listing_id: str):
+    postings = await db.marketplace_postings.find({"listing_id": listing_id}).to_list(100)
+    parsed_postings = [parse_from_mongo(posting) for posting in postings]
+    return [MarketplacePosting(**posting) for posting in parsed_postings]
+
 # Include the router in the main app
 app.include_router(api_router)
 
