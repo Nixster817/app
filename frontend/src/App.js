@@ -17,6 +17,9 @@ import { Trash2, Upload, Eye, Plus, Package, Tag, DollarSign, Share2, CheckCircl
 import { toast } from "sonner";
 import { Toaster } from "./components/ui/sonner";
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
 // Multi-Marketplace Posting Dialog Component
 const MarketplacePostingDialog = ({ listing, onPostingComplete }) => {
   const [open, setOpen] = useState(false);
