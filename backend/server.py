@@ -95,8 +95,81 @@ def parse_from_mongo(item):
         item['updated_at'] = datetime.fromisoformat(item['updated_at'])
     return item
 
-# Routes
-@api_router.get("/")
+# Sample marketplaces data
+MARKETPLACES = [
+    {
+        "id": "facebook",
+        "name": "Facebook Marketplace",
+        "description": "Reach millions of local buyers",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    },
+    {
+        "id": "ebay",
+        "name": "eBay",
+        "description": "Global marketplace with auction and buy-it-now options",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/1/1b/EBay_logo.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    },
+    {
+        "id": "craigslist",
+        "name": "Craigslist",
+        "description": "Local classified ads platform",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/e/e7/Craigslist_logo.svg",
+        "is_active": True,
+        "requires_auth": False,
+        "auth_status": "connected"
+    },
+    {
+        "id": "etsy",
+        "name": "Etsy",
+        "description": "Marketplace for handmade and vintage items",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/8/89/Etsy_logo.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    },
+    {
+        "id": "amazon",
+        "name": "Amazon Marketplace",
+        "description": "World's largest online marketplace",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    },
+    {
+        "id": "mercari",
+        "name": "Mercari",
+        "description": "Fast and easy selling platform",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Mercari_logo.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    },
+    {
+        "id": "offerup",
+        "name": "OfferUp",
+        "description": "Local marketplace app",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/0/0a/OfferUp_logo.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    },
+    {
+        "id": "poshmark",
+        "name": "Poshmark",
+        "description": "Social commerce marketplace for fashion",
+        "logo_url": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Poshmark_logo.svg",
+        "is_active": True,
+        "requires_auth": True,
+        "auth_status": "disconnected"
+    }
+]
 async def root():
     return {"message": "Multi-Marketplace Seller API"}
 
