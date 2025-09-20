@@ -37,6 +37,25 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 api_router = APIRouter(prefix="/api")
 
 # Define Models
+class Marketplace(BaseModel):
+    id: str
+    name: str
+    description: str
+    logo_url: str
+    is_active: bool
+    requires_auth: bool
+    auth_status: str = "disconnected"  # connected, disconnected, expired
+
+class MarketplacePosting(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    listing_id: str
+    marketplace_id: str
+    marketplace_listing_id: Optional[str] = None
+    status: str = "pending"  # pending, posted, failed, expired
+    posted_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    listing_url: Optional[str] = None
+
 class Listing(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
@@ -46,6 +65,7 @@ class Listing(BaseModel):
     images: List[str] = []  # Array of image URLs
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    marketplace_postings: List[MarketplacePosting] = []
 
 class ListingCreate(BaseModel):
     title: str
